@@ -3,7 +3,7 @@
     {
       "name": "Get saved - unauthorized",
       "method": "GET",
-      "path": "",
+      "path": "?action=orders",
       "expectedStatus": 401,
       "bodyMatcher": "none"
     }

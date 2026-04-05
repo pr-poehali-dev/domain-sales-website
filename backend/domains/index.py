@@ -44,12 +44,13 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 200, "headers": CORS, "body": ""}
 
     method = event.get("httpMethod", "GET")
-    path = event.get("path", "/")
+    qs = event.get("queryStringParameters") or {}
+    action = qs.get("action", "")
     headers = event.get("headers", {})
     token = headers.get("X-Auth-Token") or headers.get("x-auth-token")
 
     # Поддержка — без авторизации
-    if method == "POST" and path == "/support":
+    if method == "POST" and action == "support":
         body = json.loads(event.get("body") or "{}")
         name = body.get("name", "").strip()
         email = body.get("email", "").strip()
@@ -75,7 +76,7 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor()
 
     # --- SAVED ---
-    if method == "GET" and path == "/saved":
+    if method == "GET" and action == "saved":
         cur.execute(f"""
             SELECT id, domain_name, extension, price, saved_at
             FROM {SCHEMA}.saved_domains WHERE user_id = %s ORDER BY saved_at DESC
@@ -86,7 +87,7 @@ def handler(event: dict, context) -> dict:
             [{"id": r[0], "domain": r[1], "ext": r[2], "price": r[3], "savedAt": str(r[4])} for r in rows]
         )}
 
-    if method == "POST" and path == "/saved":
+    if method == "POST" and action == "save":
         body = json.loads(event.get("body") or "{}")
         domain = body.get("domain", "").strip().lower()
         ext = body.get("ext", "").strip().lower()
@@ -105,7 +106,7 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True})}
 
     # --- ORDERS ---
-    if method == "GET" and path == "/orders":
+    if method == "GET" and action == "orders":
         cur.execute(f"""
             SELECT id, domain_name, extension, price, status, ordered_at, domain_status, verified_at, connected_ip, connection_status
             FROM {SCHEMA}.orders WHERE user_id = %s ORDER BY ordered_at DESC
@@ -143,7 +144,7 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return {"statusCode": 200, "headers": CORS, "body": json.dumps(result)}
 
-    if method == "POST" and path == "/orders":
+    if method == "POST" and action == "buy":
         body = json.loads(event.get("body") or "{}")
         domain = body.get("domain", "").strip().lower()
         ext = body.get("ext", "").strip().lower()
@@ -160,7 +161,7 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True, "orderId": order_id})}
 
-    if method == "POST" and path == "/orders/connect":
+    if method == "POST" and action == "connect":
         body = json.loads(event.get("body") or "{}")
         order_id = body.get("orderId")
         api_key = body.get("apiKey", "").strip()
@@ -181,7 +182,7 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True, "status": "connecting"})}
 
-    if method == "POST" and path == "/orders/dns":
+    if method == "POST" and action == "dns":
         body = json.loads(event.get("body") or "{}")
         order_id = body.get("orderId")
         cur.execute(f"SELECT id FROM {SCHEMA}.orders WHERE id = %s AND user_id = %s", (order_id, user_id))
@@ -193,7 +194,7 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True, "status": "dns"})}
 
-    if method == "POST" and path == "/orders/connected":
+    if method == "POST" and action == "connected":
         body = json.loads(event.get("body") or "{}")
         order_id = body.get("orderId")
         cur.execute(f"SELECT id FROM {SCHEMA}.orders WHERE id = %s AND user_id = %s", (order_id, user_id))
@@ -205,7 +206,7 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return {"statusCode": 200, "headers": CORS, "body": json.dumps({"ok": True, "status": "connected"})}
 
-    if method == "POST" and path == "/orders/disconnect":
+    if method == "POST" and action == "disconnect":
         body = json.loads(event.get("body") or "{}")
         order_id = body.get("orderId")
         if not order_id:

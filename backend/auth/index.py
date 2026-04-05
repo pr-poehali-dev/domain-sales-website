@@ -37,11 +37,12 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 200, "headers": CORS, "body": ""}
 
     method = event.get("httpMethod", "GET")
-    path = event.get("path", "/")
+    qs = event.get("queryStringParameters") or {}
+    action = qs.get("action", "me")
     headers = event.get("headers", {})
     token = headers.get("X-Auth-Token") or headers.get("x-auth-token")
 
-    if method == "GET" and path == "/":
+    if method == "GET" and action == "me":
         if not token:
             return {"statusCode": 401, "headers": CORS, "body": json.dumps({"error": "Не авторизован"})}
         conn = get_conn()
@@ -63,7 +64,7 @@ def handler(event: dict, context) -> dict:
 
     body = json.loads(event.get("body") or "{}")
 
-    if method == "POST" and path == "/register":
+    if method == "POST" and action == "register":
         email = body.get("email", "").strip().lower()
         password = body.get("password", "")
         name = body.get("name", "").strip()
@@ -107,7 +108,7 @@ def handler(event: dict, context) -> dict:
             "email": email, "id": user_id, "fullName": full_name
         })}
 
-    if method == "POST" and path == "/login":
+    if method == "POST" and action == "login":
         email = body.get("email", "").strip().lower()
         password = body.get("password", "")
         if not email or not password:
@@ -132,7 +133,7 @@ def handler(event: dict, context) -> dict:
             "lastName": row[3], "middleName": row[4], "phone": row[5]
         })}
 
-    if method == "POST" and path == "/logout":
+    if method == "POST" and action == "logout":
         if token:
             conn = get_conn()
             cur = conn.cursor()

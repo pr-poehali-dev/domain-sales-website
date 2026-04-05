@@ -85,7 +85,7 @@ export default function Index() {
   const loadSaved = useCallback(async () => {
     const token = getToken();
     if (!token) return;
-    const r = await fetch(`${DOMAINS_URL}/saved`, { headers: { "X-Auth-Token": token } });
+    const r = await fetch(`${DOMAINS_URL}?action=saved`, { headers: { "X-Auth-Token": token } });
     const d = await r.json();
     if (Array.isArray(d)) setSavedDomains(d);
   }, []);
@@ -93,7 +93,7 @@ export default function Index() {
   const loadOrders = useCallback(async () => {
     const token = getToken();
     if (!token) return;
-    const r = await fetch(`${DOMAINS_URL}/orders`, { headers: { "X-Auth-Token": token } });
+    const r = await fetch(`${DOMAINS_URL}?action=orders`, { headers: { "X-Auth-Token": token } });
     const d = await r.json();
     if (Array.isArray(d)) setOrders(d);
   }, []);
@@ -127,12 +127,12 @@ export default function Index() {
       }
     }
     setAuthLoading(true);
-    const path = authMode === "login" ? "/login" : "/register";
+    const action = authMode === "login" ? "login" : "register";
     const body = authMode === "login"
       ? { email: authForm.email, password: authForm.password }
       : { email: authForm.email, password: authForm.password, name: authForm.name, lastName: authForm.lastName, middleName: authForm.middleName, phone: authForm.phone };
     try {
-      const r = await fetch(`${AUTH_URL}${path}`, {
+      const r = await fetch(`${AUTH_URL}?action=${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -155,7 +155,7 @@ export default function Index() {
 
   const handleLogout = async () => {
     const token = getToken();
-    if (token) await fetch(`${AUTH_URL}/logout`, { method: "POST", headers: { "X-Auth-Token": token } });
+    if (token) await fetch(`${AUTH_URL}?action=logout`, { method: "POST", headers: { "X-Auth-Token": token } });
     localStorage.removeItem("spaceruToken");
     setUser(null);
     setTab("home");
@@ -165,7 +165,7 @@ export default function Index() {
   const handleSave = async (domain: string, ext: string, price: number) => {
     if (!user) { setAuthOpen(true); return; }
     const token = getToken();
-    const r = await fetch(`${DOMAINS_URL}/saved`, {
+    const r = await fetch(`${DOMAINS_URL}?action=save`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Auth-Token": token! },
       body: JSON.stringify({ domain, ext, price }),
@@ -178,7 +178,7 @@ export default function Index() {
   const handleBuy = async (domain: string, ext: string, price: number) => {
     if (!user) { setAuthOpen(true); setBuyModal(null); return; }
     const token = getToken();
-    const r = await fetch(`${DOMAINS_URL}/orders`, {
+    const r = await fetch(`${DOMAINS_URL}?action=buy`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Auth-Token": token! },
       body: JSON.stringify({ domain, ext, price }),
@@ -198,7 +198,7 @@ export default function Index() {
     }
     const token = getToken();
     setConnectStep("connecting");
-    await fetch(`${DOMAINS_URL}/orders/connect`, {
+    await fetch(`${DOMAINS_URL}?action=connect`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Auth-Token": token! },
       body: JSON.stringify({ orderId: connectModal.id, apiKey: connectForm.apiKey, ipAddress: connectForm.ipAddress }),
@@ -206,14 +206,14 @@ export default function Index() {
     // Шаг DNS через 2 сек
     setTimeout(async () => {
       setConnectStep("dns");
-      await fetch(`${DOMAINS_URL}/orders/dns`, {
+      await fetch(`${DOMAINS_URL}?action=dns`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Auth-Token": token! },
         body: JSON.stringify({ orderId: connectModal.id }),
       });
       // Завершение через 2.5 сек
       setTimeout(async () => {
-        await fetch(`${DOMAINS_URL}/orders/connected`, {
+        await fetch(`${DOMAINS_URL}?action=connected`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-Auth-Token": token! },
           body: JSON.stringify({ orderId: connectModal.id }),
@@ -226,7 +226,7 @@ export default function Index() {
 
   const handleDisconnect = async (orderId: number) => {
     const token = getToken();
-    await fetch(`${DOMAINS_URL}/orders/disconnect`, {
+    await fetch(`${DOMAINS_URL}?action=disconnect`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Auth-Token": token! },
       body: JSON.stringify({ orderId }),
@@ -240,7 +240,7 @@ export default function Index() {
       toast({ title: "Заполните все поля", variant: "destructive" }); return;
     }
     setSupportLoading(true);
-    const r = await fetch(`${DOMAINS_URL}/support`, {
+    const r = await fetch(`${DOMAINS_URL}?action=support`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(supportForm),
