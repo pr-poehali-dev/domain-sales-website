@@ -16,14 +16,7 @@ const EXTENSIONS = [
   { ext: "com", price: 199 },
 ];
 
-const POPULAR = [
-  { label: "shop", hint: "Магазин" },
-  { label: "store", hint: "Торговля" },
-  { label: "pro", hint: "Профессионалам" },
-  { label: "market", hint: "Маркетплейс" },
-  { label: "studio", hint: "Студия" },
-  { label: "club", hint: "Сообщество" },
-];
+
 
 type User = { id: number; email: string; name: string };
 type SavedDomain = { id: number; domain: string; ext: string; price: number; savedAt: string };
@@ -35,6 +28,8 @@ export default function Index() {
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("home");
   const [query, setQuery] = useState("");
+  const [selectedExt, setSelectedExt] = useState("ru");
+  const [extDropOpen, setExtDropOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<typeof EXTENSIONS | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<User | null>(null);
@@ -48,6 +43,17 @@ export default function Index() {
   const [supportLoading, setSupportLoading] = useState(false);
   const [buyModal, setBuyModal] = useState<{ domain: string; ext: string; price: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const extRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (extRef.current && !extRef.current.contains(e.target as Node)) {
+        setExtDropOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const getToken = () => localStorage.getItem("spaceruToken");
 
@@ -87,6 +93,7 @@ export default function Index() {
     if (!q) return;
     setSearchQuery(q);
     setSearchResults(EXTENSIONS);
+    setExtDropOpen(false);
   };
 
   const handleAuth = async () => {
@@ -172,13 +179,6 @@ export default function Index() {
     }
   };
 
-  const popularSearch = (word: string) => {
-    setQuery(word);
-    setSearchQuery(word);
-    setSearchResults(EXTENSIONS);
-    setTab("home");
-  };
-
   const requireAuth = (action: () => void) => {
     if (!user) { setAuthOpen(true); return; }
     action();
@@ -259,43 +259,48 @@ export default function Index() {
             </div>
 
             {/* Search bar */}
-            <div className="flex gap-2 mb-6 shadow-sm border border-gray-200 rounded-xl overflow-hidden bg-white p-1.5">
-              <div className="flex items-center gap-2 flex-1 px-3">
-                <Icon name="Globe" size={18} className="text-gray-300 flex-shrink-0" />
+            <div className="flex gap-2 mb-6 shadow-sm border border-gray-200 rounded-xl bg-white p-1.5">
+              <div className="flex items-center flex-1 px-3 gap-0">
                 <input
                   ref={inputRef}
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleSearch()}
-                  placeholder="Введите домен или слово"
-                  className="flex-1 outline-none text-base text-gray-800 placeholder-gray-300 bg-transparent py-2.5"
+                  placeholder="Название сайта"
+                  className="flex-1 outline-none text-base text-gray-800 placeholder-gray-300 bg-transparent py-2.5 min-w-0"
                 />
+                {/* Ext selector */}
+                <div className="relative flex-shrink-0" ref={extRef}>
+                  <button
+                    onClick={() => setExtDropOpen(v => !v)}
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all text-gray-700 font-semibold text-base border border-gray-200 ml-1"
+                  >
+                    <span className="text-gray-400 font-normal">.</span>{selectedExt}
+                    <Icon name="ChevronDown" size={14} className={`text-gray-400 transition-transform ${extDropOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {extDropOpen && (
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 min-w-[120px]">
+                      {EXTENSIONS.map(({ ext, price }) => (
+                        <button
+                          key={ext}
+                          onClick={() => { setSelectedExt(ext); setExtDropOpen(false); }}
+                          className={`w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-50 transition-all ${selectedExt === ext ? "font-semibold text-black" : "text-gray-600"}`}
+                        >
+                          <span>.{ext}</span>
+                          <span className="text-gray-400 text-xs">{price} ₽</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <button
                 onClick={handleSearch}
-                className="bg-black text-white px-8 py-3 rounded-lg font-semibold text-sm hover:bg-gray-800 active:scale-95 transition-all"
+                className="bg-black text-white px-6 py-3 rounded-lg font-semibold text-sm hover:bg-gray-800 active:scale-95 transition-all flex-shrink-0"
               >
                 Подобрать
               </button>
             </div>
-
-            {/* Popular */}
-            {!searchResults && (
-              <div className="mb-14">
-                <p className="text-xs text-gray-400 mb-3 text-center">Популярные запросы</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {POPULAR.map(({ label, hint }) => (
-                    <button
-                      key={label}
-                      onClick={() => popularSearch(label)}
-                      className="px-4 py-2 rounded-full border border-gray-200 text-sm text-gray-600 hover:border-black hover:text-black transition-all"
-                    >
-                      {label} <span className="text-gray-300">— {hint}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Search Results */}
             {searchResults && (
@@ -352,7 +357,7 @@ export default function Index() {
                   {EXTENSIONS.map(({ ext, price }) => (
                     <button
                       key={ext}
-                      onClick={() => { setQuery(ext); inputRef.current?.focus(); }}
+                      onClick={() => { setSelectedExt(ext); inputRef.current?.focus(); }}
                       className="p-5 rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all text-center group"
                     >
                       <div className="text-2xl font-black mb-1 group-hover:scale-105 transition-transform inline-block">.{ext}</div>
